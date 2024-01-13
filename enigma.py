@@ -1,4 +1,7 @@
-import re, argon2
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.backends import default_backend
+from tqdm import tqdm
+import os, re, secrets, argon2
 
 
 def hash_bytes(secret_1, secret_2):
@@ -51,6 +54,52 @@ def hasher(secret_1, secret_2):
                 key_str = hash_bytes(key_str, key_str).decode()
     except Exception as e:
         print(f"Exception ! - hasher - {e}")
+        exit()
+
+
+def encrypt_large_file(input_file, key):
+    try:
+        iv = secrets.token_bytes(16)
+        cipher = Cipher(algorithms.AES(key), modes.CFB(iv), backend=default_backend())
+        encryptor = cipher.encryptor()
+        chunk_size=1024*1024
+        total_size = os.path.getsize(input_file)
+        with open(input_file,'rb') as infile, open(input_file + ".enc",'wb') as outfile, open(input_file + ".enc.iv",'wb') as ivfile:
+            with tqdm(total=total_size, unit='B', unit_scale=True, desc="Encrypting", position=0) as pbar:
+                while chunk := infile.read(chunk_size):
+                    encrypted_chunk = encryptor.update(chunk)
+                    outfile.write(encrypted_chunk)
+                    pbar.update(len(chunk))
+            final_chunk = encryptor.finalize()
+            outfile.write(final_chunk)
+            ivfile.write(iv)
+    except Exception as e:
+        print(f"Exception ! - encrypt_large_file - {e}")
+        if os.path.exists(input_file + ".enc"): os.remove(input_file + ".enc")
+        if os.path.exists(input_file + ".enc.iv"): os.remove(input_file + ".enc.iv") 
+        exit()
+
+
+def decrypt_large_file(input_file, key):
+    try:
+        with open(input_file + ".iv", 'rb') as ivfile:
+            iv = ivfile.read()
+        cipher = Cipher(algorithms.AES(key), modes.CFB(iv), backend=default_backend())
+        decryptor = cipher.decryptor()
+        chunk_size=1024*1024
+        total_size = os.path.getsize(input_file)
+        output_file = input_file[:-4]
+        with open(input_file,'rb') as infile, open(output_file,'wb') as outfile:
+            with tqdm(total=total_size, unit='B', unit_scale=True, desc="Decrypting", position=0) as pbar:
+                while chunk := infile.read(chunk_size):
+                    decrypted_chunk = decryptor.update(chunk)
+                    outfile.write(decrypted_chunk)
+                    pbar.update(len(chunk))
+            final_chunk = decryptor.finalize()
+            outfile.write(final_chunk)
+    except Exception as e:
+        print(f"Exception ! - decrypt_large_file - {e}")
+        if os.path.exists(input_file[:-4]): os.remove(input_file[:-4])
         exit()
 
 
