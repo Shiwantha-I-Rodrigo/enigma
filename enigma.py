@@ -4,6 +4,11 @@ from tqdm import tqdm
 import os, re, secrets, argon2
 
 
+#pip install cryptography
+#pip install argon2-cffi
+#pip install tqdm
+
+
 def hash_bytes(secret_1, secret_2):
     try:
         secret_2_bytes = secret_2.encode()
@@ -80,6 +85,28 @@ def encrypt_large_file(input_file, key):
         exit()
 
 
+def encrypt_file_name(input_file, key):
+    try:
+        iv = secrets.token_bytes(16)
+        file_name = str(os.path.basename(input_file)).encode()
+        cipher = Cipher(algorithms.AES(key), modes.CFB(iv), backend=default_backend())
+        encryptor = cipher.encryptor()
+        encrypted_data = encryptor.update(file_name) + encryptor.finalize()
+        new_file_name = encrypted_data.hex()
+        new_file = os.path.join(os.path.dirname(input_file), new_file_name)
+        os.rename(input_file, new_file)
+        with open(new_file + ".iv",'wb') as ivfile:
+            ivfile.write(iv)
+        return new_file
+    except Exception as e:
+        print(f"Exception ! - encrypt_file_name - {e}")
+        if not os.path.exists(input_file):
+            os.rename(new_file, input_file)
+            if os.path.exists(new_file + ".iv"):
+                os.remove(new_file + ".iv") 
+        exit()
+
+
 def decrypt_large_file(input_file, key):
     try:
         with open(input_file + ".iv", 'rb') as ivfile:
@@ -103,16 +130,56 @@ def decrypt_large_file(input_file, key):
         exit()
 
 
+def decrypt_file_name(input_file, key):
+    try:
+        with open(input_file + ".iv", 'rb') as ivfile:
+            iv = ivfile.read()
+        file_name = bytes.fromhex(os.path.basename(input_file))
+        cipher = Cipher(algorithms.AES(key), modes.CFB(iv), backend=default_backend())
+        decryptor = cipher.decryptor()
+        decrypted_data = decryptor.update(file_name) + decryptor.finalize()
+        new_file_name = decrypted_data.decode()
+        new_file = os.path.join(os.path.dirname(input_file), new_file_name)
+        os.rename(input_file, new_file)
+        return new_file
+    except Exception as e:
+        print(f"Exception ! - decrypt_file_name - {e}")
+        exit()
+
+
+def encryptor(input_file, secret_1, secret_2):
+    key = hash_bytes(secret_1, secret_2)
+    key = key[-32:]
+    encrypt_large_file(input_file,key)
+    file = encrypt_file_name(input_file + ".enc", key)
+    print(f"{input_file} encrypted!")
+
+
+def decryptor(input_file, secret_1, secret_2):
+    key = hash_bytes(secret_1, secret_2)
+    key = key[-32:]
+    file = decrypt_file_name(input_file, key)
+    decrypt_large_file(file,key)
+    os.rename(file,input_file)
+    print(f"{input_file} decrypted!")
+
+
 print("\n\nenigma2 by shiva_the_cryptic")
 while True:
     print("\n\n")
     print("1. Password Generator")
+    print("2. File Encryptor")
+    print("3. File Decryptor")
     print("9. Exit")
     print("\n\n")
     choice = input("Enter Your Choice : ")
 
     if choice == "9":
         break
+
+    if choice == "2" or choice == "3":
+        input_file = input("input file : ")
+        input_file = input_file.replace(" ","")
 
     secret_1 = input("secret 1 : ")
     secret_2 = input("secret 2 : ")
@@ -122,5 +189,9 @@ while True:
     print("\n")
     if choice == "1":
         hasher(secret_1, secret_2)
+    elif choice == "2":
+        encryptor(input_file, secret_1, secret_2)
+    elif choice == "3":
+        decryptor(input_file, secret_1, secret_2)
     else:
         print("! please enter a valid choice")
