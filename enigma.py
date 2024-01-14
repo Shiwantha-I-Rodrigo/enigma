@@ -164,12 +164,52 @@ def decryptor(input_file, secret_1, secret_2):
     print(f"{input_file} decrypted!")
 
 
+def batch_encryptor(input_folder, secret_1, secret_2, level, extention):
+    key = hash_bytes(secret_1, secret_2)
+    key = key[-32:]
+    for root, dirs, files in os.walk(input_folder):
+        current_depth = root[len(input_folder):].count(os.path.sep)
+        if current_depth <= level:
+            for file in files:
+                try:
+                    file_path = os.path.join(root, file)
+                    if not os.path.isdir(file_path) and file.endswith(extention):
+                        encrypt_large_file(file_path,key)
+                        print(f"{file_path} encrypted!")
+                        new_file = encrypt_file_name(file_path + ".enc", key)
+                        print(f"{file_path} >> {new_file} renamed!")
+                except:
+                    print(f"! exception {file}")
+
+
+def batch_decryptor(input_folder, secret_1, secret_2, level):
+    key = hash_bytes(secret_1, secret_2)
+    key = key[-32:]
+    for root, dirs, files in os.walk(input_folder):
+        current_depth = root[len(input_folder):].count(os.path.sep)
+        if current_depth <= level:
+            for file in files:
+                try:
+                    file_path = os.path.join(root, file)
+                    if not os.path.isdir(file_path) and '.' not in file:
+                        new_file = decrypt_file_name(file_path, key)
+                        print(f"{file_path} >> {new_file} renamed!")
+                        decrypt_large_file(new_file,key)
+                        print(f"{file_path} decrypted!")
+                        os.rename(new_file,file_path)
+                        print(f"{new_file} >> {file_path} renamed!")
+                except:
+                    print(f"! exception {file}")
+
+
 print("\n\nenigma2 by shiva_the_cryptic")
 while True:
     print("\n\n")
     print("1. Password Generator")
     print("2. File Encryptor")
     print("3. File Decryptor")
+    print("4. Batch Encryptor")
+    print("5. Batch Decryptor")
     print("9. Exit")
     print("\n\n")
     choice = input("Enter Your Choice : ")
@@ -177,7 +217,18 @@ while True:
     if choice == "9":
         break
 
-    if choice == "2" or choice == "3":
+    if choice == "4" or choice == "5" :
+        input_folder = input("root path : ")
+        if choice == "4":
+            print("avoid batch encrypting files in folders with already encrypted files specially of same extention !")
+            extention = input("insert extention (include dot) : ")
+        level = int(-1)
+        while not level >= 0:
+            try:
+                level = int(input("depth level ( > 0): "))
+            except:
+                print("! enter a valid number")
+    elif choice == "2" or choice == "3":
         input_file = input("input file : ")
         input_file = input_file.replace(" ","")
 
@@ -193,5 +244,9 @@ while True:
         encryptor(input_file, secret_1, secret_2)
     elif choice == "3":
         decryptor(input_file, secret_1, secret_2)
+    elif choice == "4":
+        batch_encryptor(input_folder, secret_1, secret_2, level, extention)
+    elif choice == "5":
+        batch_decryptor(input_folder, secret_1, secret_2, level)
     else:
         print("! please enter a valid choice")
