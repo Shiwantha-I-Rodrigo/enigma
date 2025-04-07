@@ -6,12 +6,10 @@ import argon2
 def hash_bytes(secret_1, secret_2):
     try:
         secret_2_bytes = secret_2.encode()
-
         while len(secret_2_bytes) < 32:
             secret_2_bytes += b'\x00'
         else:
             secret_2_bytes = secret_2_bytes[:32]
-
         key_dev = argon2.PasswordHasher(
             time_cost=20,
             memory_cost=3*1048576,
@@ -47,16 +45,12 @@ def hasher(secret_1, secret_2):
 print("\n\nenigma_hasher by shiva_the_cryptic")
 while True:
     print("\n\n")
-
     secret_1 = input("secret 1 : ")
     secret_2 = input("secret 2 : ")
     secret_1 = secret_1.replace(" ","")
     secret_2 = secret_2.replace(" ","")
-
-
     print("\n")
     hasher(secret_1, secret_2)
-
     reset = input("exit (y/n) ? ")
     if reset == "y":
         break;
