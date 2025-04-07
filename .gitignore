@@ -1,1 +1,5 @@
-env/
+env/*
+dist/*
+build/*
+enigma_hasher.spec
+enigma.spec
