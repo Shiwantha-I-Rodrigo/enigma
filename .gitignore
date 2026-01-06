@@ -1,5 +1,7 @@
 env/*
+executables/*
 dist/*
 build/*
-enigma_hasher.spec
-enigma.spec
+enigma_128.spec
+enigma_16.spec
+enigma_gui.spec

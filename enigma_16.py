@@ -4,11 +4,6 @@ from tqdm import tqdm
 import os, re, secrets, argon2
 
 
-#pip install cryptography
-#pip install argon2-cffi
-#pip install tqdm
-
-
 def hash_bytes(secret_1, secret_2):
     try:
         secret_2_bytes = secret_2.encode()
@@ -26,6 +21,7 @@ def hash_bytes(secret_1, secret_2):
             salt_len=16,
             type=argon2.low_level.Type.ID
         )
+
         print("deriving key...")
         argon_str = key_dev.hash(password=secret_1, salt=secret_2_bytes)
         print("key derived !")

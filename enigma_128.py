@@ -1,7 +1,5 @@
 import argon2
 
-#pip install cryptography
-#pip install argon2-cffi
 
 def hash_bytes(secret_1, secret_2):
     try:
