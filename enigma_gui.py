@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from PIL import Image, ImageTk
 from pathlib import Path
+import re, argon2, time, threading
 
 # ------------------ App Window ------------------
 root = tk.Tk()
@@ -78,27 +79,113 @@ output1 = ttk.Entry(root, width=28, style="My.TEntry")
 output1.grid(row=6, column=1, padx=10, pady=5)
 
 # ------------------ Button Functions ------------------
-def quick_pass():
-    set_output1("quickpass123")
-    multi_line_text = (
-        f"First input: {input1.get()}\n"
-        f"Second input: {input2.get()}\n"
-        "Status: OK"
-    )
-    set_output2(multi_line_text)
+def hash_bytes(secret_1, secret_2, mode):
+    try:
+        secret_2_bytes = secret_2.encode()
 
-def secure_pass():
-    result = messagebox.askyesno("Confirm", "generating an extra secure password is slower than (around 1 min) and use atleast 4GB of memory, Do you want to continue?")
-    if result:
-        set_output1("secure_pass123")
+        while len(secret_2_bytes) < 16:
+            secret_2_bytes += b'\x00'
+        else:
+            secret_2_bytes = secret_2_bytes[:16]
+
+        if mode==0:
+            key_dev = argon2.PasswordHasher(
+                        time_cost=8,            # Iteration count
+                        memory_cost=2097152,    # 2 GiB (in KiB)
+                        parallelism=4,          # Parallel threads
+                        hash_len=64,            # 512-bit output
+                        salt_len=16,            # 128-bit salt
+                        type=argon2.low_level.Type.ID
+                    )
+        else :
+            key_dev = argon2.PasswordHasher(
+                        time_cost=4,            # Iteration count
+                        memory_cost=524288,     # 512 MiB (in KiB)
+                        parallelism=2,          # Parallel threads
+                        hash_len=64,            # 512-bit output
+                        salt_len=16,            # 128-bit salt
+                        type=argon2.low_level.Type.ID
+                    )
+
         multi_line_text = (
-        f"First input: {input1.get()}\n"
-        f"Second input: {input2.get()}\n"
-        "Status: OK"
+        f"Secret 1: {input1.get()}\n"
+        f"Secret 2: {input2.get()}\n"
+        "Status: deriving key..."
         )
         set_output2(multi_line_text)
-    else:
-        pass
+
+        argon_str = key_dev.hash(password=secret_1, salt=secret_2_bytes)
+        
+        multi_line_text = (
+        f"Secret 1: {input1.get()}\n"
+        f"Secret 2: {input2.get()}\n"
+        "Status: key derivation complete"
+        )
+        set_output2(multi_line_text)
+
+        argon_hash = argon_str.split('$')[-1]
+        return argon_hash.encode()
+    except Exception as e:
+        print(f"Exception ! - hash_bytes - {e}")
+        exit()
+
+def quick_pass():
+    try:
+        secret_1 = input1.get()
+        secret_2 = input2.get()
+        key_str = hash_bytes(secret_1,secret_2,1).decode()
+        key_str = key_str.replace("/","@")
+        key_str = key_str.replace("+","*")
+        pass_length = ((len(secret_1)*len(secret_2))%8)+8
+        do_flag = True
+        while do_flag == True:
+            for i in range(0,len(key_str)-pass_length):
+                    match_l = re.search(r'[a-z]',key_str[i:i+pass_length])
+                    match_u = re.search(r'[a-z]',key_str[i:i+pass_length])
+                    match_n = re.search(r'[0-9]',key_str[i:i+pass_length])
+                    match_s = re.compile(r'[^a-zA-Z0-9]').search(key_str[i:i+pass_length])
+                    if match_l and match_u and match_n and match_s:
+                        set_output1(key_str[i:i+pass_length])
+                        do_flag = False
+                        break
+            if do_flag:
+                key_str = hash_bytes(key_str, key_str,1).decode()
+    except Exception as e:
+        print(f"Exception ! - hasher - {e}")
+        exit()
+
+def secure_pass():
+    result = messagebox.askyesno(
+        "Confirm",
+        "Generating an extra secure password is slower than generating a quick password (around 1 min) and use atleast 4GB of memory.\nDo you want to continue?"
+    )
+    if result:
+        threading.Thread(target=generate_password, daemon=True).start()
+
+def generate_password():
+    try:
+        secret_1 = input1.get()
+        secret_2 = input2.get()
+        key_str = hash_bytes(secret_1,secret_2,0).decode()
+        key_str = key_str.replace("/","@")
+        key_str = key_str.replace("+","*")
+        pass_length = ((len(secret_1)*len(secret_2))%8)+8
+        do_flag = True
+        while do_flag == True:
+            for i in range(0,len(key_str)-pass_length):
+                    match_l = re.search(r'[a-z]',key_str[i:i+pass_length])
+                    match_u = re.search(r'[a-z]',key_str[i:i+pass_length])
+                    match_n = re.search(r'[0-9]',key_str[i:i+pass_length])
+                    match_s = re.compile(r'[^a-zA-Z0-9]').search(key_str[i:i+pass_length])
+                    if match_l and match_u and match_n and match_s:
+                        set_output1(key_str[i:i+pass_length])
+                        do_flag = False
+                        break
+            if do_flag:
+                key_str = hash_bytes(key_str, key_str,0).decode()
+    except Exception as e:
+        print(f"Exception ! - hasher - {e}")
+        exit()
 
 def test_strength():
     multi_line_text = (

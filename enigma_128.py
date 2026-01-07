@@ -52,3 +52,10 @@ while True:
     reset = input("exit (y/n) ? ")
     if reset == "y":
         break;
+
+#sudo cryptsetup -v luksFormat --type luks2 --pbkdf argon2id --pbkdf-force-iterations 20 --pbkdf-memory 3145728 --pbkdf-parallel 2 --key-size 512 /dev/sda2
+#sudo cryptsetup open --type luks /dev/sda2 crypt
+#sudo mkfs.ext4 /dev/mapper/crypt
+#sudo mkdir /mnt/hdd
+#sudo mount /dev/mapper/crypt /mnt/hdd
+#sudo chmod 777 /mnt/hdd
